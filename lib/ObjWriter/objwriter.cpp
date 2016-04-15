@@ -272,7 +272,8 @@ extern "C" bool CreateCustomSection(ObjectWriter *OW, const char *SectionName,
   assert(OW->CustomSections.find(SectionNameStr) == OW->CustomSections.end() &&
          "Section with duplicate name already exists");
   assert(ComdatName == nullptr ||
-         OW->MOFI->getObjectFileType() == OW->MOFI->IsCOFF);
+         OW->MOFI->getObjectFileType() == OW->MOFI->IsCOFF ||
+         OW->MOFI->getObjectFileType() == OW->MOFI->IsELF);
 
   MCSection *Section = nullptr;
   SectionKind Kind = (attributes & CustomSectionAttributes_Executable)
@@ -314,13 +315,19 @@ extern "C" bool CreateCustomSection(ObjectWriter *OW, const char *SectionName,
     break;
   }
   case Triple::ELF: {
+    if (ComdatName != nullptr) {
+      MCSymbolELF *GroupSym = 
+          cast<MCSymbolELF>(OutContext.getOrCreateSymbol(ComdatName));
+      OutContext.createELFGroupSection(GroupSym);
+    }
     unsigned Flags = ELF::SHF_ALLOC;
     if (attributes & CustomSectionAttributes_Executable) {
       Flags |= ELF::SHF_EXECINSTR;
     } else if (attributes & CustomSectionAttributes_Writeable) {
       Flags |= ELF::SHF_WRITE;
     }
-    Section = OutContext.getELFSection(SectionName, ELF::SHT_PROGBITS, Flags);
+    Section = OutContext.getELFSection(SectionName, ELF::SHT_PROGBITS, Flags,
+        0, ComdatName);
     break;
   }
   default:
