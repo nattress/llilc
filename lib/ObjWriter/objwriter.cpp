@@ -322,7 +322,7 @@ extern "C" bool CreateCustomSection(ObjectWriter *OW, const char *SectionName,
       OutContext.createELFGroupSection(GroupSym);
       Flags |= ELF::SHF_GROUP;
     }
-    
+
     if (attributes & CustomSectionAttributes_Executable) {
       Flags |= ELF::SHF_EXECINSTR;
     } else if (attributes & CustomSectionAttributes_Writeable) {
