@@ -192,6 +192,9 @@ void ObjectWriter::SwitchSection(const char *SectionName,
       if (attributes & CustomSectionAttributes_MachO_Init_Func_Pointers) {
         typeAndAttributes |= MachO::SectionType::S_MOD_INIT_FUNC_POINTERS;
       }
+      if (ComdatName != nullptr) {
+        typeAndAttributes |= MachO::SectionType::S_COALESCED;
+      }
       Section = OutContext.getMachOSection(
           (attributes & CustomSectionAttributes_Executable) ? "__TEXT"
                                                             : "__DATA",
@@ -269,12 +272,17 @@ void ObjectWriter::EmitIntValue(uint64_t Value, unsigned Size) {
   OST.EmitIntValue(Value, Size);
 }
 
-void ObjectWriter::EmitSymbolDef(const char *SymbolName) {
+void ObjectWriter::EmitSymbolDef(const char *SymbolName, int symbolAttributes) {
   auto &OST = *Asm->OutStreamer;
   MCContext &OutContext = OST.getContext();
 
   MCSymbol *Sym = OutContext.getOrCreateSymbol(Twine(SymbolName));
   OST.EmitSymbolAttribute(Sym, MCSA_Global);
+
+  if (symbolAttributes == 1) {
+    OST.EmitSymbolAttribute(Sym, MCSA_WeakDefinition);
+    OST.EmitSymbolAttribute(Sym, MCSA_WeakReference);
+  }
   OST.EmitLabel(Sym);
 }
 
